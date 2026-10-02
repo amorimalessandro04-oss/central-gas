@@ -114,5 +114,5 @@ WHERE e.id = d.id AND d.ordem > 1;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_estoque_produto_unico ON estoque(produto_id);
 CREATE INDEX IF NOT EXISTS idx_caixa_data ON caixa_diario(data);
 
--- O usuário gerente padrão (admin@centralgas.com / admin123) é criado
--- automaticamente pelo backend na primeira inicialização (server.js).
+-- O primeiro usuário gerente é criado pelo backend com ADMIN_EMAIL e
+-- ADMIN_PASSWORD configurados no ambiente; nenhuma senha padrão é definida.
