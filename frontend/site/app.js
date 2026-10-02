@@ -998,6 +998,7 @@ function updateReportManualOptions() {
 
   const list = options[type] || options.entry;
   categoryField.innerHTML = list.map(([label, value]) => `<option value="${value}">${label}</option>`).join('');
+}
 
 /* ============================================================
    CENTRAL GÁS — ponte com a API compartilhada
