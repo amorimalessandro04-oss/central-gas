@@ -40,29 +40,11 @@ async function initializeDatabase() {
   console.log('Banco de dados conectado/verificado.');
 }
 
-async function seedAdmin() {
-  const email = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
-  const password = process.env.ADMIN_PASSWORD || '';
-  const nome = (process.env.ADMIN_NAME || 'Gerente').trim();
-  if (!email || !password) throw new Error('ADMIN_EMAIL e ADMIN_PASSWORD precisam ser configurados.');
-  if (password.length < 12) throw new Error('ADMIN_PASSWORD deve ter pelo menos 12 caracteres.');
-  const hash = await hashPassword(password);
-  const { rows } = await db.query('SELECT id FROM usuarios WHERE email = $1', [email]);
-  if (rows.length === 0) {
-    await db.query('INSERT INTO usuarios (email, senha, nome) VALUES ($1, $2, $3)', [email, hash, nome]);
-    console.log(`Usuário gerente criado: ${email}`);
-  } else {
-    await db.query('UPDATE usuarios SET senha = $1, nome = $2 WHERE id = $3', [hash, nome, rows[0].id]);
-    console.log(`Usuário gerente sincronizado: ${email}`);
-  }
-}
-
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, async () => {
   console.log(`Central Gás API rodando na porta ${PORT}`);
   try {
     await initializeDatabase();
-    await seedAdmin();
   } catch (err) {
     console.error('Aviso: não foi possível inicializar o banco/usuário admin:', err.message);
   }
