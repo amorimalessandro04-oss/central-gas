@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0e2d78" />
+    <meta name="description" content="Central Gás - delivery e gestão de pedidos" />
+    <title>Central Gás</title>
+    <link rel="manifest" href="manifest.json" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar hidden" id="topbar">
+        <div class="brand-wrap">
+          <img src="logo.svg" alt="Central Gás" class="brand-logo" />
+        </div>
+      </header>
+
+      <main>
+        <section class="screen active" id="homeView">
+          <div class="hero">
+            <div class="hero-brand">
+              <img src="logo.svg" alt="Central Gás" />
+            </div>
+            <div class="hero-actions">
+              <button class="primary-btn" id="btnClientOrder" type="button">Fazer pedido</button>
+              <button class="secondary-btn admin-secret" id="btnAdminSecret" type="button">Painel de gestão</button>
+              <button class="secondary-btn admin-secret" id="btnConfigSecret" type="button">Configurações</button>
+            </div>
+            <div class="status-line">
+              <span class="status-dot"></span>
+              Central Gás • Online
+            </div>
+          </div>
+        </section>
+
+        <div class="modal-backdrop hidden" id="secretModal" aria-hidden="true">
+          <div class="checkout-modal minimal" role="dialog" aria-modal="true" aria-labelledby="secretTitle">
+            <div class="modal-header">
+              <div>
+                <p class="eyebrow">Acesso restrito</p>
+                <h2 id="secretTitle">Digite a senha</h2>
+              </div>
+              <button type="button" class="modal-close" id="btnCloseSecret" aria-label="Fechar">×</button>
+            </div>
+
+            <form id="secretForm" class="checkout-form">
+              <div class="form-grid">
+                <label class="full-width">
+                  Senha
+                  <input id="secretPassword" name="password" type="password" placeholder="Digite a senha de acesso" required />
+                </label>
+              </div>
+
+              <div class="modal-actions">
+                <button type="button" class="secondary-btn" id="btnCancelSecret">Cancelar</button>
+                <button type="submit" class="primary-btn">Entrar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div class="modal-backdrop hidden" id="checkoutModal" aria-hidden="true">
+          <div class="checkout-modal" role="dialog" aria-modal="true" aria-labelledby="checkoutTitle">
+            <div class="modal-header">
+              <div>
+                <p class="eyebrow">Pedido</p>
+                <h2 id="checkoutTitle">Dados do cliente</h2>
+              </div>
+              <button type="button" class="modal-close" id="btnCloseCheckout" aria-label="Fechar">×</button>
+            </div>
+
+            <form id="checkoutForm" class="checkout-form">
+              <div class="form-grid">
+                <label>
+                  Nome completo
+                  <input id="customerName" name="name" type="text" placeholder="Ex.: João da Silva" required />
+                </label>
+
+                <label>
+                  Celular
+                  <input id="customerPhone" name="phone" type="tel" placeholder="(61) 99999-9999" required />
+                </label>
+
+                <label class="full-width">
+                  Endereço
+                  <input id="customerAddress" name="address" type="text" placeholder="Rua / Avenida" required />
+                </label>
+
+                <label>
+                  Número
+                  <input id="customerHouseNumber" name="houseNumber" type="text" placeholder="123" required />
+                </label>
+
+                <label>
+                  Bairro
+                  <input id="customerNeighborhood" name="neighborhood" type="text" placeholder="Centro" required />
+                </label>
+
+                <label class="full-width">
+                  Referência
+                  <input id="customerReference" name="reference" type="text" placeholder="Perto da igreja, próximo ao mercado..." />
+                </label>
+
+                <label class="full-width">
+                  Tipo de pedido
+                  <select id="deliveryType" name="deliveryType">
+                    <option value="retirada">Retirar na loja</option>
+                    <option value="entrega">Entrega em casa</option>
+                  </select>
+                </label>
+
+                <label class="full-width">
+                  Forma de pagamento
+                  <select id="paymentMethod" name="paymentMethod">
+                    <option value="pix">Via Pix</option>
+                    <option value="cartao">Cartão</option>
+                    <option value="nota">Nota</option>
+                    <option value="dinheiro">Dinheiro</option>
+                  </select>
+                </label>
+
+                <label class="full-width hidden" id="changeFieldWrap">
+                  Troco para entregador
+                  <input id="changeForDelivery" name="changeForDelivery" type="number" min="0" step="0.01" placeholder="Ex.: 30,00" />
+                </label>
+
+                <label class="full-width">
+                  Observações
+                  <textarea id="customerNotes" name="notes" rows="3" placeholder="Horário de entrega, ponto de referência, instruções..."></textarea>
+                </label>
+              </div>
+
+              <div class="modal-actions">
+                <button type="button" class="secondary-btn" id="btnCancelCheckout">Cancelar</button>
+                <button type="submit" class="primary-btn">Confirmar pedido</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <section class="screen" id="catalogView">
+          <div class="section-header">
+            <div>
+              <p class="eyebrow">Loja</p>
+              <h1>Catálogo de produtos</h1>
+            </div>
+            <button class="ghost-btn" id="btnBackHome" type="button">Voltar</button>
+          </div>
+
+          <div class="catalog-layout">
+            <div class="catalog-panel">
+              <div class="catalog-grid" id="catalogGrid"></div>
+            </div>
+
+            <aside class="cart-panel">
+              <div class="cart-header">
+                <h3>Carrinho</h3>
+                <span id="cartCount">0 itens</span>
+              </div>
+              <div id="cartItems" class="cart-items"></div>
+              <div class="summary-box">
+                <div class="summary-line">
+                  <span>Subtotal</span>
+                  <strong id="subtotalValue">R$ 0,00</strong>
+                </div>
+                <button class="primary-btn wide" id="btnFinalizeOrder" type="button">Finalizar pedido</button>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <section class="screen" id="adminView">
+          <div class="section-header">
+            <div>
+              <p class="eyebrow">Painel interno</p>
+              <h1>Painel de Gestão</h1>
+            </div>
+            <button class="ghost-btn" id="btnLogoutAdmin" type="button">Sair</button>
+          </div>
+
+          <div class="stats-grid">
+            <article class="stat-card red">
+              <span>Total de itens</span>
+              <strong id="statTotalProducts">0</strong>
+            </article>
+            <article class="stat-card blue">
+              <span>Sem preço</span>
+              <strong id="statMissingPrice">0</strong>
+            </article>
+            <article class="stat-card green">
+              <span>Produtos ativos</span>
+              <strong id="statActiveProducts">0</strong>
+            </article>
+          </div>
+
+          <div class="admin-grid">
+            <aside class="admin-card">
+              <h3>Adicionar / editar produto</h3>
+
+              <label>
+                Nome do produto
+                <input id="productName" type="text" placeholder="Ex.: Gás P13" />
+              </label>
+
+              <label>
+                Categoria
+                <input id="productCategory" type="text" placeholder="Ex.: Gás" />
+              </label>
+
+              <label>
+                Estoque
+                <input id="productStock" type="number" min="0" value="0" />
+              </label>
+
+              <label>
+                Preço atual (R$)
+                <input id="productPrice" type="number" min="0" step="0.01" value="0" />
+              </label>
+
+              <div class="form-actions">
+                <button class="primary-btn" id="btnSaveProduct" type="button">Salvar</button>
+                <button class="secondary-btn" id="btnResetForm" type="button">Limpar</button>
+              </div>
+            </aside>
+
+            <div class="table-card">
+              <div class="table-header">
+                <h3>Produtos cadastrados</h3>
+              </div>
+
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Produto</th>
+                      <th>Categoria</th>
+                      <th>Estoque</th>
+                      <th>Preço</th>
+                      <th>Status</th>
+                      <th>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody id="adminTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="finance-panel mt-24">
+            <div class="finance-panel-header">
+              <div>
+                <p class="eyebrow">Financeiro</p>
+                <h3>Controle de caixa e vendas</h3>
+              </div>
+            </div>
+
+            <div class="finance-summary">
+              <div class="finance-card sales">
+                <span>Vendas</span>
+                <strong id="financeSalesTotal">R$ 0,00</strong>
+              </div>
+              <div class="finance-card expenses">
+                <span>Gastos</span>
+                <strong id="financeExpensesTotal">R$ 0,00</strong>
+              </div>
+              <div class="finance-card balance">
+                <span>Saldo</span>
+                <strong id="financeBalanceTotal">R$ 0,00</strong>
+              </div>
+              <div class="finance-card sales">
+                <span>Crescimento</span>
+                <strong id="financeSalesCount">0 venda(s)</strong>
+              </div>
+            </div>
+
+            <div class="finance-forms">
+              <div class="form-card">
+                <h3>Venda na loja</h3>
+                <form id="saleForm">
+                  <label>
+                    Descrição
+                    <input id="saleDescription" name="description" type="text" placeholder="Ex.: Venda de gás no balcão" required />
+                  </label>
+                  <label>
+                    Valor (R$)
+                    <input id="saleValue" name="amount" type="number" min="0" step="0.01" placeholder="0,00" required />
+                  </label>
+                  <label>
+                    Origem
+                    <select id="saleOrigin" name="category">
+                      <option value="Loja">Loja</option>
+                      <option value="Balcão">Balcão</option>
+                      <option value="Entrega">Entrega</option>
+                      <option value="Outros">Outros</option>
+                    </select>
+                  </label>
+                  <button type="submit" class="primary-btn">Salvar venda</button>
+                </form>
+              </div>
+
+              <div class="form-card">
+                <h3>Adicionar gasto</h3>
+                <form id="expenseForm">
+                  <label>
+                    Descrição
+                    <input id="expenseDescription" name="description" type="text" placeholder="Ex.: Compra de mangueira" required />
+                  </label>
+                  <label>
+                    Valor (R$)
+                    <input id="expenseValue" name="amount" type="number" min="0" step="0.01" placeholder="0,00" required />
+                  </label>
+                  <label>
+                    Categoria
+                    <select id="expenseCategory" name="category">
+                      <option value="Operação">Operação</option>
+                      <option value="Transporte">Transporte</option>
+                      <option value="Compras">Compras</option>
+                      <option value="Gasto geral">Gasto geral</option>
+                    </select>
+                  </label>
+                  <button type="submit" class="secondary-btn">Salvar gasto</button>
+                </form>
+              </div>
+            </div>
+          </div>
+
+          <div class="monthly-report mt-24" id="monthlyReportPanel">
+            <div class="report-title">RELATÓRIO MENSAL</div>
+
+            <div class="report-grid">
+              <section class="report-block sales-block">
+                <div class="report-header">VENDAS</div>
+                <div class="report-table">
+                  <div class="report-row report-head">
+                    <span>PRODUTO</span>
+                    <span>QNT.</span>
+                  </div>
+                  <div id="reportProductRows"></div>
+                </div>
+              </section>
+
+              <section class="report-block entries-block">
+                <div class="report-header">ENTRADAS</div>
+                <div class="report-table">
+                  <div class="report-row report-head">
+                    <span>FORMA</span>
+                    <span>VALOR TOTAL</span>
+                  </div>
+                  <div class="report-row" data-report-entry="debito-caixa"><span>DEBITO CAIXA</span><span>R$ 0,00</span></div>
+                  <div class="report-row" data-report-entry="credito-caixa"><span>CREDITO CAIXA</span><span>R$ 0,00</span></div>
+                  <div class="report-row" data-report-entry="pix-caixa"><span>PIX CAIXA</span><span>R$ 0,00</span></div>
+                  <div class="report-row" data-report-entry="cartao-povo"><span>CARTÃO DO POVO</span><span>R$ 0,00</span></div>
+                  <div class="report-row" data-report-entry="debito-sicred"><span>DEBITO SICRED</span><span>R$ 0,00</span></div>
+                  <div class="report-row" data-report-entry="credito-sicred"><span>CREDITO SICRED</span><span>R$ 0,00</span></div>
+                  <div class="report-row" data-report-entry="pix-sicred"><span>PIX SICRED</span><span>R$ 0,00</span></div>
+                  <div class="report-row" data-report-entry="nota"><span>NOTA</span><span>R$ 0,00</span></div>
+                  <div class="report-row" data-report-entry="dinheiro"><span>DINHEIRO</span><span>R$ 0,00</span></div>
+                  <div class="report-row" data-report-entry="faturamento-total"><span>FAT. TOTAL</span><span>R$ 0,00</span></div>
+                </div>
+
+                <div class="report-result-box">
+                  <div class="report-result-header">RESULTADO VENDAS</div>
+                  <div class="report-row"><span>PLANTÃO</span><span id="reportPlantaoValue">R$ 0,00</span></div>
+                  <div class="report-row"><span>RETIRADAS</span><span id="reportRetiradasValue">R$ 0,00</span></div>
+                  <div class="report-row"><span>ENTREGADOR 1</span><span id="reportEntregador1Value">R$ 0,00</span></div>
+                  <div class="report-row"><span>ENTREGADOR 2</span><span id="reportEntregador2Value">R$ 0,00</span></div>
+                </div>
+              </section>
+
+              <section class="report-block outs-block">
+                <div class="report-header">SAIDAS</div>
+                <div class="report-table small-table">
+                  <div class="report-row report-head">
+                    <span>RETIRADAS</span>
+                    <span>R$</span>
+                  </div>
+                  <div class="report-row spacer-row"><span></span><span id="reportSaidasValue">R$ 0,00</span></div>
+                </div>
+
+                <div class="report-result-box finance-box">
+                  <div class="report-result-header">RESULTADO FINANCEIRO</div>
+                  <div class="report-row"><span>SALDO FINAL</span><span id="reportSaldoFinalValue">R$ 0,00</span></div>
+                </div>
+              </section>
+            </div>
+
+            <form id="reportManualForm" class="report-form">
+              <div class="report-form-grid">
+                <label>
+                  Tipo
+                  <select id="reportManualType">
+                    <option value="entry">Entrada</option>
+                    <option value="exit">Saída</option>
+                    <option value="result">Resultado de vendas</option>
+                  </select>
+                </label>
+
+                <label>
+                  Categoria
+                  <select id="reportManualCategory"></select>
+                </label>
+
+                <label>
+                  Valor (R$)
+                  <input id="reportManualValue" type="number" min="0" step="0.01" placeholder="0,00" required />
+                </label>
+
+                <label>
+                  Observação
+                  <input id="reportManualDescription" type="text" placeholder="Ex.: plantão da tarde" />
+                </label>
+              </div>
+
+              <button type="submit" class="primary-btn">Registrar no relatório</button>
+            </form>
+          </div>
+
+          <div class="movement-card mt-24">
+            <div class="table-header">
+              <h3>Movimentações recentes</h3>
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Tipo</th>
+                    <th>Descrição</th>
+                    <th>Categoria</th>
+                    <th>Valor</th>
+                    <th>Data</th>
+                  </tr>
+                </thead>
+                <tbody id="movementTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="history-card mt-24">
+            <div class="table-header">
+              <h3>Pedidos e recorrência</h3>
+            </div>
+            <div id="historyList" class="history-list"></div>
+          </div>
+        </section>
+
+        <section class="screen" id="settingsView">
+          <div class="section-header">
+            <div>
+              <p class="eyebrow">Sistema</p>
+              <h1>Configurações</h1>
+            </div>
+            <button class="ghost-btn" id="btnBackHomeSettings" type="button">Voltar</button>
+          </div>
+
+          <div class="settings-panel">
+            <div class="admin-card">
+              <h3>Dados da loja</h3>
+
+              <label>
+                Nome da loja
+                <input id="storeName" type="text" value="Central Gás" />
+              </label>
+
+              <label>
+                WhatsApp da loja
+                <input id="storeWhatsapp" type="text" value="(61) 99999-9999" />
+              </label>
+
+              <label>
+                Tempo mínimo de entrega estimado
+                <input id="storeDelivery" type="text" value="30 a 60 minutos" />
+              </label>
+
+              <div class="form-actions">
+                <button class="primary-btn" id="btnSaveSettings" type="button">Salvar configurações</button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>

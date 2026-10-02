@@ -1,0 +1,9 @@
+{
+  "name": "Central Gás",
+  "short_name": "Central Gás",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#edf2f9",
+  "theme_color": "#0e2d78",
+  "description": "Central Gás - delivery e gestão de pedidos"
+}
