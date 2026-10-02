@@ -1,35 +1,24 @@
+# Central Gás — infraestrutura R$0
+# Render hospeda apenas o backend e o frontend. O PostgreSQL fica no Supabase Free.
 services:
   - type: web
     name: central-gas-api
     runtime: node
     plan: free
     region: ohio
-    buildCommand: cd backend && npm ci
-    startCommand: cd backend && npm start
+    rootDir: backend
+    buildCommand: npm ci
+    startCommand: npm start
     healthCheckPath: /api/saude
     envVars:
       - key: NODE_ENV
         value: production
-      - key: DB_HOST
-        fromDatabase:
-          name: central-gas-db
-          property: host
-      - key: DB_PORT
-        fromDatabase:
-          name: central-gas-db
-          property: port
-      - key: DB_USER
-        fromDatabase:
-          name: central-gas-db
-          property: user
-      - key: DB_PASSWORD
-        fromDatabase:
-          name: central-gas-db
-          property: password
-      - key: DB_NAME
-        fromDatabase:
-          name: central-gas-db
-          property: database
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: CENTRAL_GAS_DB_SECRET
+        sync: false
       - key: JWT_SECRET
         generateValue: true
       - key: ADMIN_EMAIL
@@ -39,7 +28,7 @@ services:
       - key: ADMIN_NAME
         value: Gerente
       - key: CORS_ORIGINS
-        value: https://central-gas-site.onrender.com
+        sync: false
       - key: TWILIO_ACCOUNT_SID
         sync: false
       - key: TWILIO_AUTH_TOKEN
@@ -57,16 +46,10 @@ services:
     staticPublishPath: dist
     envVars:
       - key: VITE_API_URL
-        value: https://central-gas-api.onrender.com/api
+        sync: false
+      - key: NODE_VERSION
+        value: "24.21.0"
     routes:
       - type: rewrite
         source: /*
         destination: /index.html
-
-databases:
-  - name: central-gas-db
-    plan: free
-    region: ohio
-    postgresMajorVersion: "18"
-    databaseName: central_gas
-    user: central_gas
