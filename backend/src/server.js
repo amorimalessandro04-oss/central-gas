@@ -4,7 +4,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const bcrypt = require('bcrypt');
+const { hashPassword } = require('./utils/password');
 const db = require('./config/database');
 const errorHandler = require('./middleware/errorHandler');
 
@@ -45,7 +45,7 @@ async function seedAdmin() {
   if (password.length < 12) throw new Error('ADMIN_PASSWORD deve ter pelo menos 12 caracteres.');
   const { rows } = await db.query('SELECT id FROM usuarios WHERE email = $1', [email]);
   if (rows.length === 0) {
-    const hash = await bcrypt.hash(password, 10);
+    const hash = await hashPassword(password);
     await db.query('INSERT INTO usuarios (email, senha, nome) VALUES ($1, $2, $3)', [email, hash, nome]);
     console.log(`Usuário gerente criado: ${email}`);
   }
