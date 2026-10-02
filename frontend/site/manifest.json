@@ -8,9 +8,9 @@
   "description": "Central Gás - delivery e gestão de pedidos",
   "icons": [
     {
-      "src": "logo-final.jpg",
-      "sizes": "256x256",
-      "type": "image/jpeg",
+      "src": "logo-vector.svg",
+      "sizes": "768x768",
+      "type": "image/svg+xml",
       "purpose": "any maskable"
     }
   ]
