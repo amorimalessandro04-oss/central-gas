@@ -10,22 +10,18 @@ if (!SUPABASE_URL || !SUPABASE_KEY || !DB_SECRET) {
 }
 
 async function rpc(name, body) {
-  if (!SUPABASE_URL || !SUPABASE_KEY || !DB_SECRET) {
-    throw new Error('Banco não configurado');
-  }
+  if (!SUPABASE_URL || !SUPABASE_KEY || !DB_SECRET) throw new Error('Banco não configurado');
   const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
     method: 'POST',
     headers: {
       apikey: SUPABASE_KEY,
       Authorization: `Bearer ${SUPABASE_KEY}`,
-      'Content-Type': 'application/json',
-      'x-central-secret': DB_SECRET,
+      'Content-Type': 'application/json'
     },
     body: JSON.stringify(body),
   });
   const text = await response.text();
-  let data;
-  try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+  let data; try { data = text ? JSON.parse(text) : null; } catch { data = text; }
   if (!response.ok) {
     const message = data?.message || data?.error || data?.hint || `Supabase HTTP ${response.status}`;
     throw Object.assign(new Error(message), { status: response.status, details: data });
@@ -34,7 +30,8 @@ async function rpc(name, body) {
 }
 
 async function query(text, params = []) {
-  return rpc('central_gas_query', { p_sql: text, p_params: params });
+  const result = await rpc('central_gas_query2', { p_sql: text, p_params: params, p_secret: DB_SECRET });
+  return result;
 }
 
 async function createOrder(cliente, tipoEntrega, itens, observacoes) {
@@ -57,10 +54,7 @@ async function stockMove(produtoId, tipo, quantidade, motivo, usuarioId) {
 }
 
 module.exports = {
-  query,
-  createOrder,
-  stockMove,
-  rpc,
+  query, createOrder, stockMove, rpc,
   pool: {
     connect: async () => ({
       query: async () => { throw new Error('Use a operação transacional específica do banco.'); },
