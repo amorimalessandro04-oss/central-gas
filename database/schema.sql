@@ -86,7 +86,32 @@ CREATE TABLE IF NOT EXISTS caixa_diario (
 CREATE INDEX IF NOT EXISTS idx_pedidos_cliente ON pedidos(cliente_id);
 CREATE INDEX IF NOT EXISTS idx_pedidos_data ON pedidos(data_pedido);
 CREATE INDEX IF NOT EXISTS idx_itens_pedido ON itens_pedido(pedido_id);
-CREATE INDEX IF NOT EXISTS idx_estoque_produto ON estoque(produto_id);
+-- Consolida linhas duplicadas de estoque mantendo a soma antes de tornar produto_id único.
+WITH estoque_consolidado AS (
+  SELECT produto_id, MIN(id) AS id_manter,
+         SUM(quantidade_atual)::INTEGER AS quantidade_total,
+         MAX(quantidade_minima) AS quantidade_minima,
+         MAX(atualizado_em) AS atualizado_em
+  FROM estoque
+  GROUP BY produto_id
+  HAVING COUNT(*) > 1
+)
+UPDATE estoque e
+SET quantidade_atual = c.quantidade_total,
+    quantidade_minima = c.quantidade_minima,
+    atualizado_em = c.atualizado_em
+FROM estoque_consolidado c
+WHERE e.id = c.id_manter;
+
+WITH estoque_duplicado AS (
+  SELECT id, ROW_NUMBER() OVER (PARTITION BY produto_id ORDER BY id) AS ordem
+  FROM estoque
+)
+DELETE FROM estoque e
+USING estoque_duplicado d
+WHERE e.id = d.id AND d.ordem > 1;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_estoque_produto_unico ON estoque(produto_id);
 CREATE INDEX IF NOT EXISTS idx_caixa_data ON caixa_diario(data);
 
 -- O usuário gerente padrão (admin@centralgas.com / admin123) é criado

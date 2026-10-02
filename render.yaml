@@ -4,9 +4,8 @@ services:
     runtime: node
     plan: free
     region: ohio
-    rootDir: backend
-    buildCommand: npm install
-    startCommand: npm start
+    buildCommand: cd backend && npm ci
+    startCommand: cd backend && npm start
     healthCheckPath: /api/saude
     envVars:
       - key: NODE_ENV
@@ -33,6 +32,14 @@ services:
           property: database
       - key: JWT_SECRET
         generateValue: true
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: ADMIN_NAME
+        value: Gerente
+      - key: CORS_ORIGINS
+        value: https://central-gas-site.onrender.com
       - key: TWILIO_ACCOUNT_SID
         sync: false
       - key: TWILIO_AUTH_TOKEN
@@ -45,7 +52,7 @@ services:
   - type: web
     name: central-gas-site
     runtime: static
-    buildCommand: npm install && npm run build
+    buildCommand: npm ci && npm run build
     rootDir: frontend
     staticPublishPath: dist
     envVars:

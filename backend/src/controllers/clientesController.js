@@ -1,4 +1,4 @@
-// Controller de clientes
+// Controller de clientes.
 const db = require('../config/database');
 
 // Lista clientes com dias desde o último pedido (ordenado pelos mais "sumidos")
@@ -18,11 +18,20 @@ async function listar(req, res, next) {
   }
 }
 
-// Busca cliente pelo telefone (usado no checkout para histórico)
+// Recupera somente os campos necessários para preencher o checkout.
 async function buscarPorTelefone(req, res, next) {
   try {
-    const { telefone } = req.params;
-    const { rows } = await db.query('SELECT * FROM clientes WHERE telefone = $1', [telefone]);
+    const telefone = String(req.params.telefone || '').replace(/\D/g, '');
+    if (telefone.length < 10 || telefone.length > 15) {
+      return res.status(400).json({ erro: 'Telefone inválido' });
+    }
+
+    const { rows } = await db.query(
+      `SELECT nome, telefone, email, endereco FROM clientes
+       WHERE regexp_replace(telefone, '[^0-9]', '', 'g') = $1
+       ORDER BY ultimo_pedido DESC NULLS LAST LIMIT 1`,
+      [telefone]
+    );
     if (!rows[0]) return res.status(404).json({ erro: 'Cliente não encontrado' });
     res.json(rows[0]);
   } catch (err) {

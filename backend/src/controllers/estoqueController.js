@@ -18,41 +18,63 @@ async function listar(req, res, next) {
 
 // Registra movimentação (entrada/saída) e atualiza a quantidade
 async function movimentar(req, res, next) {
-  const client = await db.pool.connect();
+  let client;
+  let transacaoAberta = false;
   try {
-    const { produto_id, tipo, quantidade, motivo } = req.body;
-    if (!produto_id || !['entrada', 'saida'].includes(tipo) || !quantidade || quantidade <= 0) {
+    const { produto_id, tipo, quantidade, motivo } = req.body || {};
+    const produtoId = Number(produto_id);
+    const qtd = Number(quantidade);
+    if (!Number.isSafeInteger(produtoId) || produtoId < 1 ||
+        !['entrada', 'saida'].includes(tipo) ||
+        !Number.isSafeInteger(qtd) || qtd < 1 || qtd > 100000 ||
+        (motivo != null && (typeof motivo !== 'string' || motivo.length > 500))) {
       return res.status(400).json({ erro: 'Produto, tipo (entrada/saida) e quantidade são obrigatórios' });
     }
 
+    client = await db.pool.connect();
     await client.query('BEGIN');
+    transacaoAberta = true;
+
+    const { rows: produtos } = await client.query('SELECT id FROM produtos WHERE id = $1', [produtoId]);
+    if (!produtos[0]) {
+      await client.query('ROLLBACK');
+      transacaoAberta = false;
+      return res.status(404).json({ erro: 'Produto não encontrado' });
+    }
 
     // Garante que existe registro de estoque para o produto
     await client.query(
-      'INSERT INTO estoque (produto_id) VALUES ($1) ON CONFLICT DO NOTHING',
-      [produto_id]
+      'INSERT INTO estoque (produto_id) VALUES ($1) ON CONFLICT (produto_id) DO NOTHING',
+      [produtoId]
     );
 
-    const delta = tipo === 'entrada' ? quantidade : -quantidade;
+    const delta = tipo === 'entrada' ? qtd : -qtd;
     const { rows } = await client.query(
       `UPDATE estoque SET quantidade_atual = quantidade_atual + $1, atualizado_em = NOW()
-       WHERE produto_id = $2 RETURNING *`,
-      [delta, produto_id]
+       WHERE produto_id = $2 AND ( $1 > 0 OR quantidade_atual >= ABS($1) )
+       RETURNING *`,
+      [delta, produtoId]
     );
+    if (!rows[0]) {
+      await client.query('ROLLBACK');
+      transacaoAberta = false;
+      return res.status(409).json({ erro: 'Estoque insuficiente para essa saída' });
+    }
 
     await client.query(
       `INSERT INTO movimentacao_estoque (produto_id, tipo, quantidade, motivo, usuario_id)
        VALUES ($1, $2, $3, $4, $5)`,
-      [produto_id, tipo, quantidade, motivo || null, req.usuario?.id || null]
+      [produtoId, tipo, qtd, motivo || null, req.usuario?.id || null]
     );
 
     await client.query('COMMIT');
+    transacaoAberta = false;
     res.status(201).json(rows[0]);
   } catch (err) {
-    await client.query('ROLLBACK');
+    if (transacaoAberta && client) await client.query('ROLLBACK').catch(() => {});
     next(err);
   } finally {
-    client.release();
+    client?.release();
   }
 }
 
@@ -60,11 +82,17 @@ async function movimentar(req, res, next) {
 async function ajustarMinimo(req, res, next) {
   try {
     const { produto_id } = req.params;
-    const { quantidade_minima } = req.body;
+    const { quantidade_minima } = req.body || {};
+    const minimo = Number(quantidade_minima);
+    const produtoId = Number(produto_id);
+    if (!Number.isSafeInteger(produtoId) || produtoId < 1 ||
+        !Number.isSafeInteger(minimo) || minimo < 0 || minimo > 100000) {
+      return res.status(400).json({ erro: 'Quantidade mínima inválida' });
+    }
     const { rows } = await db.query(
       `UPDATE estoque SET quantidade_minima = $1, atualizado_em = NOW()
        WHERE produto_id = $2 RETURNING *`,
-      [quantidade_minima, produto_id]
+      [minimo, produtoId]
     );
     if (!rows[0]) return res.status(404).json({ erro: 'Estoque não encontrado' });
     res.json(rows[0]);

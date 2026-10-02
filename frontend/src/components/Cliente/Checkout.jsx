@@ -3,6 +3,7 @@ import api from '../../services/api';
 
 const fmt = (v) => `R$ ${Number(v).toFixed(2).replace('.', ',')}`;
 const CLIENTE_STORAGE = 'central_gas_cliente';
+const normalizarTelefone = (telefone) => String(telefone || '').replace(/\D/g, '');
 
 function carregarClienteSalvo() {
   try {
@@ -21,6 +22,7 @@ export default function Checkout({ itens, tipoEntrega, setTipoEntrega, onConfirm
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState('');
   const [clienteSalvo, setClienteSalvo] = useState(() => !!carregarClienteSalvo());
+  const [telefoneConsultado, setTelefoneConsultado] = useState('');
 
   const precoDe = (p) => (tipoEntrega === 'entrega' ? p.preco_entrega : p.preco_retirada);
   const total = itens.reduce((s, i) => s + precoDe(i) * i.quantidade, 0);
@@ -29,9 +31,10 @@ export default function Checkout({ itens, tipoEntrega, setTipoEntrega, onConfirm
     let ativo = true;
     async function recuperarCadastro() {
       const salvo = carregarClienteSalvo();
-      if (!salvo?.telefone) return;
+      const telefone = normalizarTelefone(salvo?.telefone);
+      if (telefone.length < 10) return;
       try {
-        const { data } = await api.get(`/clientes/telefone/${encodeURIComponent(salvo.telefone)}`);
+        const { data } = await api.get(`/clientes/telefone/${encodeURIComponent(telefone)}`);
         if (!ativo || !data) return;
         const atualizado = {
           nome: data.nome || salvo.nome || '',
@@ -53,14 +56,37 @@ export default function Checkout({ itens, tipoEntrega, setTipoEntrega, onConfirm
     return () => { ativo = false; };
   }, []);
 
+  async function recuperarCadastroPorTelefone() {
+    const telefone = normalizarTelefone(form.telefone);
+    if (telefone.length < 10 || telefone === telefoneConsultado) return;
+
+    setTelefoneConsultado(telefone);
+    try {
+      const { data } = await api.get(`/clientes/telefone/${encodeURIComponent(telefone)}`);
+      const atualizado = {
+        nome: data.nome || '',
+        telefone: normalizarTelefone(data.telefone) || telefone,
+        email: data.email || '',
+        endereco: data.endereco || '',
+      };
+      setForm((atual) => ({ ...atual, ...atualizado }));
+      localStorage.setItem(CLIENTE_STORAGE, JSON.stringify(atualizado));
+      setClienteSalvo(true);
+    } catch (err) {
+      if (err.response?.status !== 404) setTelefoneConsultado('');
+      // O checkout continua disponível quando ainda não existe cadastro ou a consulta falha.
+    }
+  }
+
   const set = (campo) => (e) => setForm({ ...form, [campo]: e.target.value });
 
   async function confirmar(e) {
     e.preventDefault();
     setErro('');
+    const telefone = normalizarTelefone(form.telefone);
 
-    if (!form.nome.trim() || !form.telefone.trim()) {
-      setErro('Preencha nome e telefone.');
+    if (!form.nome.trim() || telefone.length < 10 || telefone.length > 15) {
+      setErro('Preencha nome e um telefone válido com DDD.');
       return;
     }
     if (tipoEntrega === 'entrega' && !form.endereco.trim()) {
@@ -73,7 +99,7 @@ export default function Checkout({ itens, tipoEntrega, setTipoEntrega, onConfirm
       const { data } = await api.post('/pedidos', {
         cliente: {
           nome: form.nome.trim(),
-          telefone: form.telefone.trim(),
+          telefone,
           email: form.email.trim() || null,
           endereco: form.endereco.trim() || null,
         },
@@ -83,13 +109,13 @@ export default function Checkout({ itens, tipoEntrega, setTipoEntrega, onConfirm
       });
       const clientePersistido = {
         nome: form.nome.trim(),
-        telefone: form.telefone.trim(),
+        telefone,
         email: form.email.trim() || '',
         endereco: form.endereco.trim() || '',
       };
       localStorage.setItem(CLIENTE_STORAGE, JSON.stringify(clientePersistido));
       setClienteSalvo(true);
-      onConfirmado(data, form.telefone.trim());
+      onConfirmado(data, telefone);
     } catch (err) {
       setErro(err.response?.data?.erro || 'Erro ao confirmar o pedido. Tente novamente.');
     } finally {
@@ -106,7 +132,16 @@ export default function Checkout({ itens, tipoEntrega, setTipoEntrega, onConfirm
       <input value={form.nome} onChange={set('nome')} placeholder="Seu nome completo" />
 
       <label>Telefone (com DDD) *</label>
-      <input value={form.telefone} onChange={set('telefone')} placeholder="(66) 99999-9999" inputMode="tel" />
+      <input
+        value={form.telefone}
+        onChange={(e) => {
+          setForm({ ...form, telefone: e.target.value });
+          if (normalizarTelefone(e.target.value) !== telefoneConsultado) setTelefoneConsultado('');
+        }}
+        onBlur={recuperarCadastroPorTelefone}
+        placeholder="(66) 99999-9999"
+        inputMode="tel"
+      />
 
       <label>Email</label>
       <input type="email" value={form.email} onChange={set('email')} placeholder="opcional" />

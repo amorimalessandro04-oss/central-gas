@@ -29,25 +29,29 @@ psql -U postgres -d central_gas -f database\schema.sql
 
 ```powershell
 cd backend
-npm install
+npm ci
 copy .env.example .env   # edite com suas credenciais
 npm run dev              # http://localhost:5000
 ```
 
 Na primeira execução é criado o usuário gerente:
 - **Email:** `admin@centralgas.com`
-- **Senha:** `admin123` (troque depois!)
+- **Senha:** defina `ADMIN_PASSWORD` no arquivo `backend/.env` (mínimo de 12 caracteres).
+
+Não existe senha padrão no backend. Se o usuário gerente já existir no banco, as variáveis `ADMIN_EMAIL` e `ADMIN_PASSWORD` não recriam nem redefinem a conta.
 
 ### 3. Frontend
 
 ```powershell
 cd frontend
-npm install
+npm ci
 npm run dev              # http://localhost:5173
 ```
 
 - Cliente: http://localhost:5173
 - Gestão: http://localhost:5173/gestao
+
+Para testar os fluxos da API com banco simulado, execute `npm test` dentro de `backend/`. O build de produção do site é `npm run build` dentro de `frontend/`.
 
 ## WhatsApp (Twilio)
 
@@ -89,4 +93,10 @@ npm run dev              # http://localhost:5173
 
 ## Deploy no Render
 
-O arquivo `render.yaml` define o backend Express, o frontend React/Vite e o PostgreSQL compartilhado. O backend inicializa `database/schema.sql` na primeira execução e usa as mesmas tabelas para o aplicativo de gestão e para o site.
+O arquivo `render.yaml` define o backend Express, o frontend React/Vite e o PostgreSQL compartilhado. O backend aguarda a conexão, verifica o schema e cria o primeiro usuário gerente antes de aceitar tráfego. No primeiro deploy, informe `ADMIN_EMAIL` e `ADMIN_PASSWORD` no painel do Render. `CORS_ORIGINS` inclui por padrão o domínio Render do site; acrescente também qualquer domínio personalizado. O processo do backend roda a partir da raiz do repositório para que `database/schema.sql` também esteja disponível.
+
+O site e o PWA de gestão usam a mesma URL `VITE_API_URL`; a API consulta e grava o mesmo banco PostgreSQL para catálogo, clientes, estoque, pedidos e caixa.
+
+O Blueprint marca os serviços dinâmicos e o PostgreSQL como `free` para testes. Troque-os por planos pagos antes de produção: o banco gratuito expira após 30 dias e não tem backups gerenciados; serviços web gratuitos podem dormir quando ociosos.
+
+Antes de abrir para clientes, configure senhas e segredos próprios, adicione autenticação do cliente (por exemplo, código de confirmação por SMS/WhatsApp) para proteger a recuperação do cadastro e do histórico por telefone, confirme backups/restauração do PostgreSQL e monitore os serviços e o envio de WhatsApp. A rota pública de recuperação exige o telefone, mas isso sozinho não comprova a identidade do cliente.

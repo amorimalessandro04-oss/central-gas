@@ -1,8 +1,15 @@
-// Middleware central de tratamento de erros
+// Middleware central de tratamento de erros.
 function errorHandler(err, req, res, next) {
-  console.error('Erro:', err);
-  const status = err.status || 500;
-  res.status(status).json({ erro: err.message || 'Erro interno do servidor' });
+  if (res.headersSent) return next(err);
+
+  const status = Number.isInteger(err.status) && err.status >= 400 && err.status < 500
+    ? err.status
+    : 500;
+  if (status >= 500) console.error('Erro interno:', err);
+
+  res.status(status).json({
+    erro: status >= 500 ? 'Erro interno do servidor' : (err.message || 'Requisição inválida'),
+  });
 }
 
 module.exports = errorHandler;
