@@ -1,0 +1,65 @@
+services:
+  - type: web
+    name: central-gas-api
+    runtime: node
+    plan: free
+    region: ohio
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/saude
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DB_HOST
+        fromDatabase:
+          name: central-gas-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: central-gas-db
+          property: port
+      - key: DB_USER
+        fromDatabase:
+          name: central-gas-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: central-gas-db
+          property: password
+      - key: DB_NAME
+        fromDatabase:
+          name: central-gas-db
+          property: database
+      - key: JWT_SECRET
+        generateValue: true
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_WHATSAPP_NUMBER
+        sync: false
+      - key: GERENTE_WHATSAPP
+        sync: false
+
+  - type: web
+    name: central-gas-site
+    runtime: static
+    buildCommand: npm install && npm run build
+    rootDir: frontend
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://central-gas-api.onrender.com/api
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+databases:
+  - name: central-gas-db
+    plan: free
+    region: ohio
+    postgresMajorVersion: "18"
+    databaseName: central_gas
+    user: central_gas
