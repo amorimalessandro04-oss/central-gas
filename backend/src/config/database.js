@@ -30,7 +30,7 @@ async function rpc(name, body) {
 }
 
 async function query(text, params = []) {
-  const result = await rpc('central_gas_query2', { p_sql: text, p_params: params, p_secret: DB_SECRET });
+  const result = await rpc('central_gas_query3', { p_sql: text, p_params: params, p_secret: DB_SECRET });
   return result;
 }
 
