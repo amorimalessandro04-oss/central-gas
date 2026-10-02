@@ -12,7 +12,7 @@ const app = express();
 app.set('trust proxy', 1);
 const allowedOrigins = (process.env.CORS_ORIGINS || '').split(',').map((v) => v.trim()).filter(Boolean);
 app.use(cors({ origin: (origin, callback) => {
-  if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) return callback(null, true);
+  if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes('*') || allowedOrigins.includes(origin)) return callback(null, true);
   return callback(new Error('Origem não autorizada pelo CORS'));
 }, credentials: true }));
 app.use(express.json({ limit: '32kb' }));
