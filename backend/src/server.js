@@ -1,6 +1,6 @@
 // ============================================================
-// CENTRAL GÁS - Servidor Express
-// ============================================================
+ // CENTRAL GÁS - Servidor Express
+ // ============================================================
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -11,8 +11,11 @@ const errorHandler = require('./middleware/errorHandler');
 const app = express();
 app.set('trust proxy', 1);
 const allowedOrigins = (process.env.CORS_ORIGINS || '').split(',').map((v) => v.trim()).filter(Boolean);
-app.use(cors({ origin: (origin, callback) => { if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) return callback(null, true); return callback(new Error('Origem não autorizada pelo CORS')); }, credentials: true }));
-app.use(express.json());
+app.use(cors({ origin: (origin, callback) => {
+  if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) return callback(null, true);
+  return callback(new Error('Origem não autorizada pelo CORS'));
+}, credentials: true }));
+app.use(express.json({ limit: '32kb' }));
 
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/produtos', require('./routes/produtos'));
@@ -25,7 +28,7 @@ app.get('/api/saude', async (req, res) => {
   try {
     await db.query('SELECT 1 AS ok');
     res.json({ status: 'ok', app: 'Central Gás', banco: 'ok' });
-  } catch (err) {
+  } catch {
     res.status(503).json({ status: 'erro', app: 'Central Gás', banco: 'indisponivel' });
   }
 });
@@ -38,16 +41,19 @@ async function initializeDatabase() {
 }
 
 async function seedAdmin() {
-  const email = process.env.ADMIN_EMAIL;
-  const password = process.env.ADMIN_PASSWORD;
-  const nome = process.env.ADMIN_NAME || 'Gerente';
+  const email = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+  const password = process.env.ADMIN_PASSWORD || '';
+  const nome = (process.env.ADMIN_NAME || 'Gerente').trim();
   if (!email || !password) throw new Error('ADMIN_EMAIL e ADMIN_PASSWORD precisam ser configurados.');
   if (password.length < 12) throw new Error('ADMIN_PASSWORD deve ter pelo menos 12 caracteres.');
+  const hash = await hashPassword(password);
   const { rows } = await db.query('SELECT id FROM usuarios WHERE email = $1', [email]);
   if (rows.length === 0) {
-    const hash = await hashPassword(password);
     await db.query('INSERT INTO usuarios (email, senha, nome) VALUES ($1, $2, $3)', [email, hash, nome]);
     console.log(`Usuário gerente criado: ${email}`);
+  } else {
+    await db.query('UPDATE usuarios SET senha = $1, nome = $2 WHERE id = $3', [hash, nome, rows[0].id]);
+    console.log(`Usuário gerente sincronizado: ${email}`);
   }
 }
 
